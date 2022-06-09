@@ -67,6 +67,7 @@ const DragAndDrop = () => {
         >
           <Box display="flex" alignItems="center">
             <InsertPhotoOutlinedIcon />
+            {}
             <Typography>{resepImgUrl}</Typography>
           </Box>
           <IconButton
