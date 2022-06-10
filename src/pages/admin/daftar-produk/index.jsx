@@ -6,8 +6,7 @@ import {
   OutlinedInput,
   Typography,
 } from "@mui/material";
-import DataTable from "components/Admin/table";
-import _ from "lodash";
+import DataTable from "components/admin_components/table";
 import SearchIcon from "@mui/icons-material/Search";
 import AddIcon from "@mui/icons-material/Add";
 import DownloadIcon from "@mui/icons-material/Download";
