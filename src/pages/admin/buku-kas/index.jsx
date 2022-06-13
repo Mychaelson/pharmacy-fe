@@ -132,6 +132,12 @@ const KartuStok = () => {
     }
   }, [router.isReady]);
 
+  const selectionRange = {
+    startDate: new Date(),
+    endDate: new Date(),
+    key: "selection",
+  };
+
   return (
     <Box paddingTop="38px" width="1186px" height="100%" paddingX="48px">
       <Box display="flex" justifyContent="space-between" alignItems="center">
