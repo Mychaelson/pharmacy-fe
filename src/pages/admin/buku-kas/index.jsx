@@ -9,7 +9,6 @@ import {
   Typography,
 } from "@mui/material";
 import moment from "moment";
-// import _ from "lodash";
 import SearchIcon from "@mui/icons-material/Search";
 import DownloadIcon from "@mui/icons-material/Download";
 import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
@@ -131,12 +130,6 @@ const KartuStok = () => {
       }
     }
   }, [router.isReady]);
-
-  const selectionRange = {
-    startDate: new Date(),
-    endDate: new Date(),
-    key: "selection",
-  };
 
   return (
     <Box paddingTop="38px" width="1186px" height="100%" paddingX="48px">
