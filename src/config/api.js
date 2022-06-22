@@ -1,6 +1,6 @@
 /* eslint-disable no-param-reassign */
 import axios from "axios";
-// import Cookies from "js-cookie";
+import Cookies from "js-cookie";
 
 // eslint-disable-next-line import/prefer-default-export
 export const API_URL = "http://localhost:2000";
