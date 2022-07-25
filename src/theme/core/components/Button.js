@@ -13,7 +13,7 @@ const Button = (theme) => {
           "&:hover": {
             backgroundColor: theme.palette.Brand["500"],
             color: "white",
-            borderColor: "white",
+            borderColor: "transparent",
           },
           borderColor: theme.palette.Brand["500"],
           color: theme.palette.Brand["500"],
@@ -23,7 +23,7 @@ const Button = (theme) => {
             backgroundColor: theme.palette.Brand["600"],
             borderColor: theme.palette.Brand["500"],
             boxShadow: 0,
-            border: "1px solid",
+            border: 0,
           },
           color: "white",
           backgroundColor: theme.palette.Brand["500"],

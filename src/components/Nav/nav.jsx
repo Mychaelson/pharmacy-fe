@@ -1,7 +1,8 @@
 import {
   Avatar,
+  Badge,
   Box,
-  // Button,
+  Button,
   FormControl,
   IconButton,
   InputAdornment,
@@ -17,17 +18,21 @@ import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import Link from "next/link";
 import { useDispatch, useSelector } from "react-redux";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { logout } from "redux/reducer/auth";
 import jsCookie from "js-cookie";
-import Router from "next/router";
+import Router, { useRouter } from "next/router";
+import { search } from "../../redux/reducer/search";
 import shopee from "../../public/Images/shopee.png";
 
 const Nav = () => {
   const userSelector = useSelector((state) => state.auth);
+  const cartSelector = useSelector((state) => state.cart);
   const dispatch = useDispatch();
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
+  const [searchInput, setSearchInput] = useState("");
+  const router = useRouter();
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
   };
@@ -41,12 +46,39 @@ const Nav = () => {
     jsCookie.remove("user_auth_token");
     Router.push("/login");
   };
+
+  const inputHandler = (event) => {
+    setSearchInput(event.target.value);
+  };
+
+  useEffect(() => {
+    if (router.isReady) {
+      if (router.query.searchProduk) {
+        dispatch(search(router.query.searchProduk));
+      }
+    }
+  }, []);
+
+  const searchProdukHandler = () => {
+    dispatch(search(searchInput));
+    if (router.pathname === "product-list") {
+      router.push({
+        query: {
+          searchProduk: searchInput,
+        },
+      });
+    } else {
+      router.push(`product-list?searchProduk=${searchInput}`);
+    }
+  };
+
   return (
     <Box
       sx={{
         display: "flex",
         flexDirection: "row",
         alignItems: "center",
+        justifyContent: "space-around",
         borderBottom: 1,
         borderColor: "white",
         boxShadow: "0 0 15px -3px #FF6600",
@@ -74,11 +106,18 @@ const Nav = () => {
           Cari Obat, Suplemen, Vitamin, produk Kesehatan
         </InputLabel>
         <OutlinedInput
+          onChange={inputHandler}
           id="outlined-search"
           sx={{ borderRadius: 2 }}
           endAdornment={
             <InputAdornment position="end">
-              <IconButton edge="end" sx={{ mr: 1 }}>
+              <IconButton
+                edge="end"
+                sx={{ mr: 1 }}
+                onClick={() => {
+                  searchProdukHandler();
+                }}
+              >
                 <BsSearch />
               </IconButton>
             </InputAdornment>
@@ -86,61 +125,78 @@ const Nav = () => {
           label="Cari Obat, Suplemen, Vitamin, produk Kesehatan yuk"
         />
       </FormControl>
-
-      {/* USER NOT LOGGED IN */}
-
-      {/* <Button
-        variant="outlined"
-        sx={{
-          mr: 3,
-          ml: 3,
-          width: 150,
-          height: 50,
-        }}
-      >
-        Masuk
-      </Button>
-      <Button
-        variant="contained"
-        sx={{
-          width: 150,
-          height: 50,
-          boxShadow: 0,
-          "&:hover": {
-            boxShadow: 0,
-          },
-        }}
-      >
-        Daftar
-      </Button> */}
-
-      {/* USER LOGGED IN */}
-      <Link href="/keranjang">
-        <IconButton sx={{ ml: "50px" }}>
-          <ShoppingCartIcon sx={{ color: "Brand.500" }} />
-        </IconButton>
-      </Link>
-      <IconButton sx={{ ml: "50px" }}>
-        <NotificationsIcon sx={{ color: "Brand.500" }} />
-      </IconButton>
-      <Box sx={{ display: "flex", alignItems: "center", ml: "52px" }}>
-        <Avatar
-          onClick={handleClick}
-          src={userSelector?.photo_profile}
-          sx={{ ":hover": { cursor: "pointer" } }}
-        />
-        <Menu anchorEl={anchorEl} open={open} onClose={handleClose}>
-          <MenuItem>
-            <Link href="/profile-page">Profil Saya</Link>
-          </MenuItem>
-          <MenuItem onClick={logoutBtnHandler}>Keluar</MenuItem>
-        </Menu>
-        <Typography sx={{ ml: "14px" }}>
-          {userSelector?.nama?.length > 5
-            ? `${userSelector?.nama?.slice(0, 4)}...`
-            : userSelector?.nama}
-        </Typography>
-      </Box>
+      {userSelector.id ? (
+        <>
+          <IconButton
+            onClick={() => router.push("/keranjang")}
+            disabled={!cartSelector.items.length}
+            sx={{ ml: "50px" }}
+          >
+            <Badge
+              badgeContent={cartSelector.items.length}
+              color="error"
+              invisible={cartSelector.items.length === 0}
+            >
+              <ShoppingCartIcon sx={{ color: "Brand.500", fontSize: "28px" }} />
+            </Badge>
+          </IconButton>
+          <IconButton sx={{ ml: "50px" }}>
+            <NotificationsIcon sx={{ color: "Brand.500", fontSize: "28px" }} />
+          </IconButton>
+          <Box sx={{ display: "flex", alignItems: "center", ml: "52px" }}>
+            <Avatar
+              onClick={handleClick}
+              src={userSelector?.photo_profile}
+              sx={{
+                ":hover": { cursor: userSelector.id ? "pointer" : "default" },
+                border: "1px solid #F5F6F9",
+              }}
+            />
+            {userSelector.id ? (
+              <Menu
+                anchorEl={anchorEl}
+                open={open}
+                onClick={handleClose}
+                onClose={handleClose}
+              >
+                <MenuItem>
+                  <Link href="/profile-page">Profil Saya</Link>
+                </MenuItem>
+                <MenuItem>
+                  <Link href="/proses-pemesanan">Transaksi</Link>
+                </MenuItem>
+                <MenuItem onClick={logoutBtnHandler}>Keluar</MenuItem>
+              </Menu>
+            ) : null}
+            <Typography sx={{ ml: "14px" }}>
+              {userSelector?.nama?.length > 5
+                ? `${userSelector?.nama?.slice(0, 4)}...`
+                : userSelector?.nama}
+            </Typography>
+          </Box>
+        </>
+      ) : (
+        <Box display="flex" justifyContent="flex-end">
+          <Button
+            variant="outlined"
+            sx={{ height: "50px", width: "118px", mr: 3 }}
+            onClick={() => {
+              router.push("/login");
+            }}
+          >
+            Login
+          </Button>
+          <Button
+            variant="contained"
+            sx={{ height: "50px", width: "118px" }}
+            onClick={() => {
+              router.push("/register");
+            }}
+          >
+            Daftar
+          </Button>
+        </Box>
+      )}
     </Box>
   );
 };

@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Frame from "public/Images/Frame.png";
 import GoogleIcon from "public/Images/google-icon.png";
-import FacebookOutlinedIcon from "@mui/icons-material/FacebookOutlined";
+// import FacebookOutlinedIcon from "@mui/icons-material/FacebookOutlined";
 import {
   OutlinedInput,
   Box,
@@ -34,12 +34,19 @@ import InfoIcon from "@mui/icons-material/Info";
 import axiosInstance from "config/api";
 import { useRouter } from "next/router";
 import { useSnackbar } from "notistack";
+import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { auth } from "config/firebase/firebase";
+import jsCookie from "js-cookie";
+import { login } from "redux/reducer/auth";
+import { useDispatch } from "react-redux";
+import Page from "components/Page";
 
 const RegisterPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [term, setTerm] = useState(false);
 
   const router = useRouter();
+  const dispatch = useDispatch();
   const { enqueueSnackbar } = useSnackbar();
 
   const termHandle = () => {
@@ -97,59 +104,86 @@ const RegisterPage = () => {
     validateOnChange: false,
   });
 
+  const googleProvider = new GoogleAuthProvider();
+
+  const signInWithGoogle = async () => {
+    try {
+      const google = await signInWithPopup(auth, googleProvider);
+
+      const res = await axiosInstance.post("/auth/login-with-google", {
+        uid: google.user.uid,
+        username: google.user.displayName,
+        name: google.user.displayName,
+        email: google.user.email,
+        image_url: google.user.photoURL,
+      });
+
+      const userResponse = res.data.result;
+      jsCookie.set("user_auth_token", userResponse.token);
+
+      dispatch(login(userResponse.user));
+      enqueueSnackbar(res?.data?.message, { variant: "success" });
+      router.push("/");
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.log(err);
+      // enqueueSnackbar(err?.response?.data?.message, { variant: "error" });
+    }
+  };
+
   return (
     <>
-      {/* <AdminSidebar /> */}
-      {/* <Stack direction="row"> */}
-      <Grid container columns={{ xs: 4, md: 12 }}>
-        <Grid item display={{ xs: "none", md: "block" }} xs={0} md={6}>
-          <Box>
-            <Image src={Frame} layout="fixed" />
-          </Box>
-        </Grid>
-        <Grid item xs={4} md={6}>
-          <Box
-            px={{ xs: "35px", sm: "96px" }}
-            py="50px"
-            height="100vh"
-            overflow="scroll"
-          >
-            <Typography fontWeight="bold" variant="h4" component="h4">
-              Mari Kita Mulai
-            </Typography>
-            <Typography>
-              Sudah Punya Akun ?{" "}
-              <Link href="/login">
-                <Typography
-                  sx={{ ":hover": { cursor: "pointer" } }}
-                  component="span"
-                  color="Brand.500"
+      <Page title="Register">
+        <Grid container columns={{ xs: 4, md: 12 }}>
+          <Grid item display={{ xs: "none", md: "block" }} xs={0} md={6}>
+            <Box>
+              <Image src={Frame} layout="fixed" />
+            </Box>
+          </Grid>
+          <Grid item xs={4} md={6}>
+            <Box
+              px={{ xs: "35px", sm: "96px" }}
+              py="50px"
+              height="100vh"
+              overflow="scroll"
+            >
+              <Typography fontWeight="bold" variant="h4" component="h4">
+                Mari Kita Mulai
+              </Typography>
+              <Typography>
+                Sudah Punya Akun ?{" "}
+                <Link href="/login">
+                  <Typography
+                    sx={{ ":hover": { cursor: "pointer" } }}
+                    component="span"
+                    color="Brand.500"
+                  >
+                    Masuk
+                  </Typography>
+                </Link>{" "}
+              </Typography>
+              <Stack direction="row" spacing={2} marginY="32px">
+                <Button
+                  fullWidth
+                  startIcon={<Image src={GoogleIcon} />}
+                  variant="contained"
+                  sx={{
+                    backgroundColor: "white",
+                    color: "black",
+                    fontWeight: "bold",
+                    minHeight: "48px",
+                    border: "2px solid #c7bfaf",
+                    boxShadow: "none",
+                    ":hover": {
+                      backgroundColor: "#c7bfaf",
+                      border: "2px solid transparent",
+                    },
+                  }}
+                  onClick={signInWithGoogle}
                 >
-                  Masuk
-                </Typography>
-              </Link>{" "}
-            </Typography>
-            <Stack direction="row" spacing={2} marginY="32px">
-              <Button
-                fullWidth
-                startIcon={<Image src={GoogleIcon} />}
-                variant="contained"
-                sx={{
-                  backgroundColor: "white",
-                  color: "black",
-                  fontWeight: "bold",
-                  minHeight: "48px",
-                  border: "2px solid #c7bfaf",
-                  boxShadow: "none",
-                  ":hover": {
-                    backgroundColor: "#c7bfaf",
-                    border: "2px solid transparent",
-                  },
-                }}
-              >
-                Daftar dengan Google
-              </Button>
-              <Button
+                  Daftar dengan Google
+                </Button>
+                {/* <Button
                 fullWidth
                 startIcon={
                   <FacebookOutlinedIcon
@@ -163,156 +197,162 @@ const RegisterPage = () => {
                 }}
               >
                 Daftar dengan Facebook
-              </Button>
-            </Stack>
-            <Divider>atau</Divider>
-            <FormControl
-              fullWidth
-              required
-              error={formik.errors.name}
-              sx={{ mt: "16px" }}
-            >
-              <FormLabel>Name</FormLabel>
-              <OutlinedInput
-                onChange={(e) => {
-                  formik.setFieldValue("name", e.target.value);
-                }}
-                placeholder="John Doe"
-                startAdornment={
-                  <AccountCircleIcon
-                    sx={{ marginRight: "17px" }}
-                    htmlColor="#02114f"
-                  />
-                }
-                sx={{ borderRadius: "10px" }}
-              />
-              {formik.errors.name && (
-                <FormHelperText>{formik.errors.name}</FormHelperText>
-              )}
-            </FormControl>
-            <FormControl
-              fullWidth
-              required
-              error={formik.errors.username}
-              sx={{ mt: "16px" }}
-            >
-              <FormLabel>Username</FormLabel>
-              <OutlinedInput
-                onChange={(e) => {
-                  formik.setFieldValue("username", e.target.value);
-                }}
-                placeholder="johndoe"
-                startAdornment={
-                  <AccountCircleIcon
-                    sx={{ marginRight: "17px" }}
-                    htmlColor="#02114f"
-                  />
-                }
+              </Button> */}
+              </Stack>
+              <Divider>atau</Divider>
+              <FormControl
                 fullWidth
-                sx={{ borderRadius: "10px" }}
-              />
-              <FormHelperText>{formik.errors.username}</FormHelperText>
-              {/* {formik.errors.username && (
+                required
+                error={formik.errors.name}
+                sx={{ mt: "16px" }}
+              >
+                <FormLabel>Name</FormLabel>
+                <OutlinedInput
+                  onChange={(e) => {
+                    formik.setFieldValue("name", e.target.value);
+                  }}
+                  placeholder="John Doe"
+                  startAdornment={
+                    <AccountCircleIcon
+                      sx={{ marginRight: "17px" }}
+                      htmlColor="#02114f"
+                    />
+                  }
+                  sx={{ borderRadius: "10px" }}
+                />
+                {formik.errors.name && (
+                  <FormHelperText>{formik.errors.name}</FormHelperText>
+                )}
+              </FormControl>
+              <FormControl
+                fullWidth
+                required
+                error={formik.errors.username}
+                sx={{ mt: "16px" }}
+              >
+                <FormLabel>Username</FormLabel>
+                <OutlinedInput
+                  onChange={(e) => {
+                    formik.setFieldValue("username", e.target.value);
+                  }}
+                  placeholder="johndoe"
+                  startAdornment={
+                    <AccountCircleIcon
+                      sx={{ marginRight: "17px" }}
+                      htmlColor="#02114f"
+                    />
+                  }
+                  fullWidth
+                  sx={{ borderRadius: "10px" }}
+                />
+                <FormHelperText>{formik.errors.username}</FormHelperText>
+                {/* {formik.errors.username && (
               <FormHelperText>{formik.errors.username}</FormHelperText>
             )} */}
-            </FormControl>
-            <FormControl
-              fullWidth
-              required
-              error={formik.errors.email}
-              sx={{ mt: "16px" }}
-            >
-              <FormLabel>Email Address</FormLabel>
-              <OutlinedInput
-                onChange={(e) => {
-                  formik.setFieldValue("email", e.target.value);
-                }}
-                placeholder="JohnDoe@gmail.com"
-                startAdornment={
-                  <MailIcon sx={{ marginRight: "17px" }} htmlColor="#02114f" />
-                }
+              </FormControl>
+              <FormControl
                 fullWidth
-                sx={{ borderRadius: "10px" }}
-              />
-              {formik.errors.email && (
-                <FormHelperText>{formik.errors.email}</FormHelperText>
-              )}
-            </FormControl>
-            <FormControl
-              fullWidth
-              required
-              error={formik.errors.password}
-              sx={{ mt: "16px" }}
-            >
-              <FormLabel>
-                Password
-                <Tooltip
-                  title="Passwords should contain at least 8 characters including an uppercase letter, a symbol, and a number"
-                  TransitionComponent={Fade}
-                  TransitionProps={{ timeout: 600 }}
-                  sx={{ ml: "5px" }}
-                >
-                  <InfoIcon fontSize="small" />
-                </Tooltip>
-              </FormLabel>
-              <OutlinedInput
-                onChange={(e) => {
-                  formik.setFieldValue("password", e.target.value);
-                }}
-                type={showPassword ? "text" : "password"}
-                placeholder="Password123@"
-                startAdornment={
-                  <LockIcon sx={{ marginRight: "17px" }} htmlColor="#02114f" />
-                }
+                required
+                error={formik.errors.email}
+                sx={{ mt: "16px" }}
+              >
+                <FormLabel>Email Address</FormLabel>
+                <OutlinedInput
+                  onChange={(e) => {
+                    formik.setFieldValue("email", e.target.value);
+                  }}
+                  placeholder="JohnDoe@gmail.com"
+                  startAdornment={
+                    <MailIcon
+                      sx={{ marginRight: "17px" }}
+                      htmlColor="#02114f"
+                    />
+                  }
+                  fullWidth
+                  sx={{ borderRadius: "10px" }}
+                />
+                {formik.errors.email && (
+                  <FormHelperText>{formik.errors.email}</FormHelperText>
+                )}
+              </FormControl>
+              <FormControl
                 fullWidth
-                sx={{
-                  borderRadius: "10px",
-                }}
-                endAdornment={
-                  <IconButton onClick={() => setShowPassword(!showPassword)}>
-                    {showPassword ? (
-                      <VisibilityIcon htmlColor="#02114f" />
-                    ) : (
-                      <VisibilityOffIcon htmlColor="#02114f" />
-                    )}
-                  </IconButton>
-                }
-              />
-              {formik.errors.password && (
-                <FormHelperText>{formik.errors.password}</FormHelperText>
-              )}
-            </FormControl>
-            <FormControlLabel
-              control={<Checkbox checked={term} onChange={termHandle} />}
-              label={
-                <Typography>
-                  Saya setuju dengan{" "}
-                  <Typography color="Brand.500" component="span">
-                    persyaratan
-                  </Typography>{" "}
-                  dan{" "}
-                  <Typography color="Brand.500" component="span">
-                    ketentuan
+                required
+                error={formik.errors.password}
+                sx={{ mt: "16px" }}
+              >
+                <FormLabel>
+                  Password
+                  <Tooltip
+                    title="Passwords should contain at least 8 characters including an uppercase letter, a symbol, and a number"
+                    TransitionComponent={Fade}
+                    TransitionProps={{ timeout: 600 }}
+                    sx={{ ml: "5px" }}
+                  >
+                    <InfoIcon fontSize="small" />
+                  </Tooltip>
+                </FormLabel>
+                <OutlinedInput
+                  onChange={(e) => {
+                    formik.setFieldValue("password", e.target.value);
+                  }}
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Password123@"
+                  startAdornment={
+                    <LockIcon
+                      sx={{ marginRight: "17px" }}
+                      htmlColor="#02114f"
+                    />
+                  }
+                  fullWidth
+                  sx={{
+                    borderRadius: "10px",
+                  }}
+                  endAdornment={
+                    <IconButton onClick={() => setShowPassword(!showPassword)}>
+                      {showPassword ? (
+                        <VisibilityIcon htmlColor="#02114f" />
+                      ) : (
+                        <VisibilityOffIcon htmlColor="#02114f" />
+                      )}
+                    </IconButton>
+                  }
+                />
+                {formik.errors.password && (
+                  <FormHelperText>{formik.errors.password}</FormHelperText>
+                )}
+              </FormControl>
+              <FormControlLabel
+                control={<Checkbox checked={term} onChange={termHandle} />}
+                label={
+                  <Typography>
+                    Saya setuju dengan{" "}
+                    <Typography color="Brand.500" component="span">
+                      persyaratan
+                    </Typography>{" "}
+                    dan{" "}
+                    <Typography color="Brand.500" component="span">
+                      ketentuan
+                    </Typography>
                   </Typography>
-                </Typography>
-              }
-            />
-            <Button
-              sx={{
-                minHeight: "48px",
-                textTransform: "initial",
-              }}
-              variant="contained"
-              fullWidth
-              disabled={!term || formik.isSubmitting}
-              onClick={formik.handleSubmit}
-            >
-              Register
-            </Button>
-          </Box>
+                }
+              />
+              <Button
+                sx={{
+                  minHeight: "48px",
+                  textTransform: "initial",
+                }}
+                variant="contained"
+                fullWidth
+                disabled={!term || formik.isSubmitting}
+                onClick={formik.handleSubmit}
+              >
+                Register
+              </Button>
+            </Box>
+          </Grid>
         </Grid>
-      </Grid>
-      {/* </Stack> */}
+      </Page>
     </>
   );
 };

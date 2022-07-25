@@ -1,33 +1,27 @@
+/* eslint-disable consistent-return */
+/* eslint-disable no-else-return */
 /* eslint-disable no-nested-ternary */
-import {
-  Grid,
-  Box,
-  Typography,
-  Button,
-  FormControlLabel,
-  Checkbox,
-  Stack,
-  Divider,
-} from "@mui/material";
+import { Grid, Box, Typography, Button, Tooltip } from "@mui/material";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
-import Kursiplastik from "public/Images/kursiplastik.png";
-import Image from "next/image";
-import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import ChatIcon from "@mui/icons-material/Chat";
 import ReceiptIcon from "@mui/icons-material/Receipt";
 import { useState } from "react";
-import ModalTerimaPesanan from "../ModalTerimaPesanan";
-import ModalSalinanResep from "../ModalSalinanResep";
+import moment from "moment";
+import "moment/locale/id";
+import ProductCardItems from "components/Admin/ProductCardItems";
+import ModalTerimaPesanan from "components/Admin/ModalTerimaPesanan";
+import axiosInstance from "config/api";
+import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
+import KeyboardArrowUpRoundedIcon from "@mui/icons-material/KeyboardArrowUpRounded";
+import ModalBuktiPembayaran from "../ModalBuktiPembayaran";
 
 const CardOrder = ({
-  checked = false,
-  setCartChecked,
   status,
   orderCode,
   orderTime,
-  expiredResponse,
+  productAdded,
   productImage,
-  isObatResep = false,
+  isObatResep,
   productName,
   productQty,
   productPrice,
@@ -35,20 +29,122 @@ const CardOrder = ({
   buyersName,
   buyersAddress,
   courier,
+  transaksiId,
   totalPrice,
+  product,
+  detail,
+  reRender,
 }) => {
-  // Status: "Pesanan Baru", "Dalam Pengiriman", "Siap Dikirim", "Pesanan Selesai", "Pesanan Dibatalkan"
-
   const [open, setOpen] = useState(false);
+  const [buktiPembayaran, setBuktiPembayaran] = useState(false);
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
-  const [salinanResep, setSalinanResep] = useState(false);
+  const [showAllProduct, setShowAllProduct] = useState(false);
+
+  const declineTransaction = async (transactionId) => {
+    try {
+      await axiosInstance.post("/admin/decline-transaction", {
+        transactionId,
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.log(err);
+    }
+  };
+
+  const askDelivery = async (transactionId) => {
+    try {
+      await axiosInstance.post("/admin/ask-for-delivery", {
+        transactionId,
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.log(err);
+    }
+  };
+
+  const declineHandler = (value) => {
+    declineTransaction(value);
+  };
+
+  const deliveryHandler = (value) => {
+    askDelivery(value);
+  };
+
+  const color = () => {
+    if (status === 1 || status === 2 || status === 3) {
+      return "white";
+    } else if (status === 4) {
+      return "#14C38E";
+    } else if (status === 5) {
+      return "#FF5C5C";
+    }
+  };
+
+  const renderProduct = () => {
+    if (detail.is_resep) {
+      return (
+        <ProductCardItems
+          image={detail.resep_image_url}
+          nama={detail.nomor_resep}
+          harga={detail.total_price}
+          productAdded={detail.productAdded}
+          isObatResep={detail.is_resep}
+          buyersName={detail.user.username}
+          transaksiId={transaksiId}
+          orderCode={orderCode}
+        />
+      );
+    }
+    if (showAllProduct) {
+      return product?.map((valo) => {
+        return (
+          <ProductCardItems
+            image={valo?.product?.produk_image_url[0]}
+            nama={valo?.product?.nama_produk}
+            jumlah={valo?.quantity}
+            harga={valo?.price_when_sold}
+            productImage={productImage}
+            productName={productName}
+            productQty={productQty}
+            productPrice={productPrice}
+            isObatResep={isObatResep}
+            productAdded={productAdded}
+            buyersName={buyersName}
+            orderCode={orderCode}
+            transaksiId={transaksiId}
+            orderTime={orderTime}
+          />
+        );
+      });
+    }
+
+    return (
+      <ProductCardItems
+        image={product[0]?.product?.produk_image_url[0]}
+        nama={product[0]?.product?.nama_produk}
+        jumlah={product[0]?.quantity}
+        harga={product[0]?.price_when_sold}
+        productImage={productImage}
+        productName={productName}
+        productQty={productQty}
+        productPrice={productPrice}
+        isObatResep={isObatResep}
+        productAdded={productAdded}
+        buyersName={buyersName}
+        orderCode={orderCode}
+        transaksiId={transaksiId}
+        orderTime={orderTime}
+      />
+    );
+  };
 
   return (
     <>
       {/* Product Component */}
 
       {/* Box 1 */}
+
       <Box
         sx={{
           marginTop: "32px",
@@ -58,8 +154,8 @@ const CardOrder = ({
           width: "100%",
           paddingX: "32px",
           paddingY: "16px",
-          backgroundColor: "white",
         }}
+        backgroundColor={color()}
       >
         <Box
           sx={{
@@ -71,22 +167,17 @@ const CardOrder = ({
         >
           {/* Check Box */}
           <Box display="flex" alignItems="center" flexDirection="row">
-            <FormControlLabel
-              sx={{ marginRight: 0 }}
-              control={
-                <Checkbox
-                  onClick={setCartChecked}
-                  checked={checked}
-                  sx={{
-                    color: "Brand.500",
-                    "&.Mui-checked": {
-                      color: "Brand.500",
-                    },
-                  }}
-                />
-              }
-            />
-            <Typography sx={{ fontWeight: "bold" }}>{status}</Typography>
+            <Typography sx={{ fontWeight: "bold" }}>
+              {status === 1
+                ? "Pesanan Baru"
+                : status === 2
+                ? "Siap Dikirim"
+                : status === 3
+                ? "Dalam Pengiriman"
+                : status === 4
+                ? "Selesai"
+                : "Dibatalkan"}
+            </Typography>
             <Typography sx={{ color: "Sidebar.700", marginLeft: "10px" }}>
               /
             </Typography>
@@ -97,13 +188,13 @@ const CardOrder = ({
               /
             </Typography>
             <AccessTimeIcon sx={{ marginLeft: "10px", color: "gray" }} />
-            <Typography sx={{ color: "gray" }}>{orderTime}</Typography>
+            <Typography sx={{ color: "gray" }}>
+              {moment(orderTime).format("DD MMMM YYYY, HH:mm")}
+            </Typography>
           </Box>
 
           {/* Countdown Box */}
-          {status === "Dalam Pengiriman" ||
-          status === "Pesanan Selesai" ||
-          status === "Pesanan Dibatalkan" ? null : (
+          {status === 3 || status === 4 || status === 5 ? null : (
             <Box display="flex" alignItems="center" flexDirection="row">
               <Typography sx={{ fontWeight: "bold", marginRight: "6px" }}>
                 Respon Sebelum
@@ -121,7 +212,11 @@ const CardOrder = ({
                 }}
               >
                 <AccessTimeIcon />
-                <Typography>{expiredResponse}</Typography>
+                <Typography>
+                  {moment(orderTime)
+                    .add(2, "days")
+                    .format("DD MMMM YYYY, HH:mm")}
+                </Typography>
               </Box>
             </Box>
           )}
@@ -143,80 +238,49 @@ const CardOrder = ({
         {/* Detail Pemesanan */}
         <Grid container>
           {/* Box Product Image */}
-          <Grid item container xs={3}>
-            <Stack direction="row">
+          <Grid item container xs={4}>
+            {renderProduct()}
+            {!isObatResep && product.length > 1 && !showAllProduct ? (
               <Box
+                display="flex"
+                alignItems="center"
                 sx={{
-                  height: "75px",
-                  width: "75px",
-                  borderRadius: "5px",
-                  border: "1px solid #B4B9C7",
+                  color: "Brand.500",
+                  "&:hover": {
+                    cursor: "pointer",
+                  },
+                }}
+                onClick={() => {
+                  setShowAllProduct(true);
                 }}
               >
-                <Image src={productImage || Kursiplastik} layout="responsive" />
+                <Typography marginLeft={2} my={1}>
+                  Lihat {product.length - 1} obat lainnya{" "}
+                </Typography>
+                <KeyboardArrowDownRoundedIcon />
               </Box>
-
-              {/* Box Product Title, Qty, etc */}
+            ) : undefined}
+            {!isObatResep && product.length > 1 && showAllProduct ? (
               <Box
+                display="flex"
+                alignItems="center"
                 sx={{
-                  display: "flex",
-                  flexDirection: "column",
-                  marginX: "20px",
+                  color: "Brand.500",
+                  width: "100%",
+                  "&:hover": {
+                    cursor: "pointer",
+                  },
+                }}
+                onClick={() => {
+                  setShowAllProduct(false);
                 }}
               >
-                {isObatResep ? (
-                  <>
-                    <Typography sx={{ fontSize: "14px", fontWeight: "bolder" }}>
-                      Resep Dokter
-                    </Typography>
-                    <Button
-                      variant="contained"
-                      onClick={() => setSalinanResep(true)}
-                      sx={{
-                        maxHeight: "32px",
-                        fontSize: "12px",
-                      }}
-                    >
-                      Buat Salinan Resep
-                    </Button>
-                    <ModalSalinanResep
-                      open={salinanResep}
-                      handleClose={() => setSalinanResep(false)}
-                      namaPembeli={buyersName}
-                      hargaProduk={productPrice}
-                      hargaTotal={totalPrice}
-                      jumlahProduk={productQty}
-                      kodeOrder={orderCode}
-                      namaProduk={productName}
-                      waktuOrder={orderTime}
-                    />
-                  </>
-                ) : (
-                  <>
-                    <Typography sx={{ fontSize: "14px", fontWeight: "bolder" }}>
-                      {productName}
-                    </Typography>
-                    <Typography sx={{ fontSize: "14px", color: "gray" }}>
-                      {productQty} x {productPrice}
-                    </Typography>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        flexDirection: "row",
-                        alignItems: "center",
-                        color: "Brand.500",
-                      }}
-                    >
-                      <Typography sx={{ fontSize: "12px" }}>
-                        lihat {productOrderQty} obat lainnya
-                      </Typography>
-                      <KeyboardArrowDownIcon sx={{ size: "12px" }} />
-                    </Box>
-                  </>
-                )}
+                <Typography marginLeft={2} my={1}>
+                  Tutup
+                </Typography>
+                <KeyboardArrowUpRoundedIcon />
               </Box>
-            </Stack>
-            <Divider orientation="vertical" />
+            ) : undefined}
           </Grid>
 
           {/* Box Detail Pengiriman */}
@@ -270,26 +334,36 @@ const CardOrder = ({
           </Grid>
         </Grid>
 
-        {/* Total Harga */}
-        <Box
-          sx={{
-            marginTop: "14px",
-            marginBottom: "20px",
-            borderRadius: "5px",
-            backgroundColor: "#faf0e8",
-            padding: "16px",
-            display: "flex",
-            flexDirection: "row",
-            justifyContent: "space-between",
-          }}
-        >
+        {isObatResep && totalPrice === 0 ? null : (
           <Box
             sx={{
+              marginTop: "14px",
+              marginBottom: "20px",
+              borderRadius: "5px",
+              backgroundColor: "#faf0e8",
+              padding: "16px",
               display: "flex",
               flexDirection: "row",
-              alignItems: "center",
+              justifyContent: "space-between",
             }}
           >
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "row",
+                alignItems: "center",
+              }}
+            >
+              <Typography
+                sx={{
+                  fontSize: "16px",
+                  fontWeight: "bold",
+                  marginRight: "8px",
+                }}
+              >
+                Total Harga
+              </Typography>
+            </Box>
             <Typography
               sx={{
                 fontSize: "16px",
@@ -297,22 +371,10 @@ const CardOrder = ({
                 marginRight: "8px",
               }}
             >
-              Total Harga
-            </Typography>
-            <Typography sx={{ fontSize: "12px", fontWeight: "bold" }}>
-              ({productQty} Obat)
+              Rp {totalPrice.toLocaleString()}
             </Typography>
           </Box>
-          <Typography
-            sx={{
-              fontSize: "16px",
-              fontWeight: "bold",
-              marginRight: "8px",
-            }}
-          >
-            Rp {totalPrice},-
-          </Typography>
-        </Box>
+        )}
 
         {/* Kategori Footer */}
         <Box
@@ -341,10 +403,40 @@ const CardOrder = ({
             >
               Chat Pembeli
             </Typography>
-            <ReceiptIcon sx={{ marginRight: "10px" }} />
-            <Typography sx={{ fontSize: "14px", fontWeight: "bold" }}>
-              Detail Pemesanan
-            </Typography>
+            {detail?.proof_of_payment ? (
+              <>
+                <ReceiptIcon
+                  onClick={() => {
+                    setBuktiPembayaran(true);
+                  }}
+                  sx={{
+                    marginRight: "10px",
+                    ":hover": {
+                      cursor: "pointer",
+                    },
+                  }}
+                />
+                <Typography
+                  onClick={() => {
+                    setBuktiPembayaran(true);
+                  }}
+                  sx={{
+                    fontSize: "14px",
+                    fontWeight: "bold",
+                    ":hover": {
+                      cursor: "pointer",
+                    },
+                  }}
+                >
+                  Lihat Bukti Pembayaran
+                </Typography>
+              </>
+            ) : null}
+            <ModalBuktiPembayaran
+              open={buktiPembayaran}
+              handleClose={() => setBuktiPembayaran(false)}
+              gambarBuktiPembayaran={detail?.proof_of_payment?.bukti_transfer}
+            />
           </Box>
           <Box
             sx={{
@@ -352,17 +444,49 @@ const CardOrder = ({
               flexDirection: "row",
             }}
           >
-            {status === "Siap Dikirim" ? (
-              <Button variant="contained">Minta Penjemputan</Button>
-            ) : status === "Dalam Pengiriman" ? (
+            {status === 2 ? (
+              <Button
+                variant="contained"
+                onClick={async () => {
+                  await deliveryHandler(transaksiId);
+                  reRender();
+                }}
+              >
+                Minta Penjemputan
+              </Button>
+            ) : status === 3 ? (
               <Button variant="contained">Lihat Rincian</Button>
-            ) : status === "Pesanan Baru" ? (
+            ) : status === 1 ? (
               <>
-                <Button sx={{ color: "Brand.500" }}>Tolak Pesanan</Button>
-                <Button variant="contained" onClick={handleOpen}>
-                  Terima Pesanan
+                <Button
+                  onClick={async () => {
+                    await declineHandler(transaksiId);
+                    reRender();
+                  }}
+                  sx={{ color: "Brand.500" }}
+                >
+                  Tolak Pesanan
                 </Button>
+                {(isObatResep && !productAdded && !detail.proof_of_payment) ||
+                !detail.proof_of_payment ? (
+                  <Tooltip title="Menunggu Pembayaran" placement="top">
+                    <span>
+                      <Button variant="contained" disabled>
+                        Terima Pesanan
+                      </Button>
+                    </span>
+                  </Tooltip>
+                ) : (
+                  <Button
+                    variant="contained"
+                    onClick={handleOpen}
+                    sx={{ "&:hover": { border: 0 } }}
+                  >
+                    Terima Pesanan
+                  </Button>
+                )}
                 <ModalTerimaPesanan
+                  transaksiId={transaksiId}
                   open={open}
                   handleClose={handleClose}
                   hargaProduk={productPrice}
@@ -373,6 +497,8 @@ const CardOrder = ({
                   namaProduk={productName}
                   totalHarga={totalPrice}
                   waktuOrder={orderTime}
+                  productsData={product}
+                  reRender={reRender}
                 />
               </>
             ) : null}

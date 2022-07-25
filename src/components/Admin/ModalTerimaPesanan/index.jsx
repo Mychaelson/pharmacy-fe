@@ -1,9 +1,10 @@
 import { Modal, Typography, Box, Divider, Button } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import { useState } from "react";
 import Image from "next/image";
 import Group8725 from "public/Images/Group8725.png";
+import axiosInstance from "config/api";
+import moment from "moment";
 
 const ModalTerimaPesanan = ({
   open,
@@ -11,16 +12,27 @@ const ModalTerimaPesanan = ({
   namaPembeli,
   kodeOrder,
   waktuOrder,
-  namaProduk,
-  jumlahProduk,
-  hargaProduk,
-  jumlahProdukOrder,
   totalHarga,
+  transaksiId,
+  productsData = [],
+  reRender,
 }) => {
   const [terimaPesanan, setTerimaPesanan] = useState(false);
 
-  const isTerima = () => {
+  const acceptTransaction = async (transactionId) => {
+    try {
+      await axiosInstance.post("/admin/accept-transaction", {
+        transactionId,
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.log(err);
+    }
+  };
+
+  const acceptHandler = (value) => {
     setTerimaPesanan(true);
+    acceptTransaction(value);
   };
 
   return (
@@ -118,7 +130,6 @@ const ModalTerimaPesanan = ({
               alignItems="center"
               flexDirection="row"
               marginTop="30px"
-              marginBottom="10px"
             >
               <Typography sx={{ fontWeight: "bold", fontSize: "12px" }}>
                 {namaPembeli}
@@ -154,29 +165,21 @@ const ModalTerimaPesanan = ({
               <Typography
                 sx={{ color: "gray", marginLeft: "10px", fontSize: "12px" }}
               >
-                {waktuOrder}
+                {moment(waktuOrder).format("DD MMMM YYYY, HH:mm")}
               </Typography>
             </Box>
-            <Typography fontSize="14px" fontWeight="bold">
-              {namaProduk}
-            </Typography>
-            <Typography sx={{ fontSize: "12px", color: "gray" }}>
-              {jumlahProduk} x {hargaProduk}
-            </Typography>
-            <Box
-              sx={{
-                marginTop: "11px",
-                display: "flex",
-                flexDirection: "row",
-                alignItems: "center",
-                color: "Brand.500",
-              }}
-            >
-              <Typography sx={{ fontSize: "12px" }}>
-                lihat {jumlahProdukOrder} obat lainnya
-              </Typography>
-              <KeyboardArrowDownIcon sx={{ size: "12px" }} />
-            </Box>
+            {productsData.map((val) => {
+              return (
+                <Box marginTop="10px">
+                  <Typography fontSize="14px" fontWeight="bold">
+                    {val?.product?.nama_produk}
+                  </Typography>
+                  <Typography sx={{ fontSize: "12px", color: "gray" }}>
+                    {val?.quantity} x {val?.price_when_sold?.toLocaleString()}
+                  </Typography>
+                </Box>
+              );
+            })}
           </Box>
 
           {/* Box 2 */}
@@ -210,7 +213,7 @@ const ModalTerimaPesanan = ({
                     Total Harga
                   </Typography>
                   <Typography sx={{ fontSize: "10px", fontWeight: "bold" }}>
-                    ({jumlahProduk} Obat)
+                    ({productsData?.length} Obat)
                   </Typography>
                 </Box>
                 <Typography
@@ -220,13 +223,19 @@ const ModalTerimaPesanan = ({
                     marginRight: "8px",
                   }}
                 >
-                  Rp {totalHarga},-
+                  Rp {totalHarga.toLocaleString()}
                 </Typography>
               </Box>
             </Box>
             <Divider orientation="horizontal" />
             <Box display="flex" justifyContent="flex-end" padding="16px">
-              <Button onClick={isTerima} variant="contained">
+              <Button
+                onClick={async () => {
+                  await acceptHandler(transaksiId);
+                  reRender();
+                }}
+                variant="contained"
+              >
                 Terima Pesanan
               </Button>
             </Box>

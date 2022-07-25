@@ -1,6 +1,6 @@
 import { Box, Drawer, Typography } from "@mui/material";
 import Image from "next/image";
-import Healthymed from "public/Images/Healthymed.png";
+import Healthymed from "public/Images/healthymed.png";
 import ReceiptIcon from "@mui/icons-material/Receipt";
 import { MdHomeFilled } from "react-icons/md";
 import { GiMedicines } from "react-icons/gi";
@@ -96,6 +96,10 @@ const AdminSidebar = () => {
             {
               submenuTitle: "Ringkasan Statistik",
               href: "/admin/ringkasan-statistik",
+            },
+            {
+              submenuTitle: "Product Report",
+              href: "/admin/product-details",
             },
             { submenuTitle: "Buku Kas", href: "/admin/buku-kas" },
             { submenuTitle: "Laba & Rugi", href: "/admin/laba-&-rugi" },

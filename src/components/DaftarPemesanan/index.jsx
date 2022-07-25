@@ -1,16 +1,75 @@
+/* eslint-disable no-console */
+/* eslint-disable camelcase */
 import { Box, Button, Stack, Typography } from "@mui/material";
 import CheckOutCard from "components/CheckOut";
+import ModalUploadPembayaran from "components/ModalUploadPembayaran";
+import axiosInstance from "config/api";
+import moment from "moment";
+import "moment/locale/id";
+import { useRouter } from "next/router";
+import { useState } from "react";
 import { BsFillChatDotsFill } from "react-icons/bs";
 
-const DaftarPemesanan = ({ status }) => {
+const DaftarPemesanan = ({
+  status,
+  total_harga,
+  produk,
+  detail,
+  transaksiId,
+  reRender,
+  time,
+}) => {
+  const router = useRouter();
+  const [uploadPembayaran, setUploadPembayaran] = useState(false);
+  const renderProduk = () => {
+    if (detail.is_resep) {
+      return (
+        <CheckOutCard
+          produk_image={detail.resep_image_url}
+          produk_name={detail.nomor_resep}
+          produk_price={detail.total_price}
+          isResep={detail.is_resep}
+          time={time}
+        />
+      );
+    }
+    return produk?.map((valo) => {
+      return (
+        <CheckOutCard
+          produk_image={valo?.product?.produk_image_url[0]}
+          produk_name={valo?.product?.nama_produk}
+          produk_satuan={valo?.product?.satuan}
+          produk_price={valo?.product?.harga_jual}
+          produk_qty={valo?.quantity}
+          product_diskon={valo?.product?.diskon}
+          time={time}
+        />
+      );
+    });
+  };
+
+  const finishTransaction = async (transactionId) => {
+    try {
+      await axiosInstance.post("/transaction/finish-transaction", {
+        transactionId,
+      });
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  const finishHandler = (value) => {
+    finishTransaction(value);
+  };
   return (
     <Stack>
       <Stack
         sx={{
-          border: "1px solid white",
+          border: "1px solid transparent",
           borderRadius: 3,
           boxShadow: "0 0 15px -10px black",
           mt: "44px",
+          background: "#F7F7F7",
         }}
       >
         <Box
@@ -19,16 +78,32 @@ const DaftarPemesanan = ({ status }) => {
             justifyContent: "space-between",
             paddingY: "34px",
             paddingX: "40px",
-            borderBottom: "2px solid #F5F6F9",
+            borderBottom: "2px solid white",
           }}
         >
-          <Typography>Jumat, 5 April 2022, 15:45</Typography>
-          {status === "Dikirim" || status === "Selesai" ? (
+          <Typography>
+            {moment(detail?.createdAt)
+              .locale("in")
+              .format("dddd, DD MMMM YYYY, HH:MM")}
+          </Typography>
+          {status === "Dikirim" ||
+          status === "Selesai" ||
+          status === "Menunggu" ||
+          status === "Diproses" ? (
             <Box
               sx={{
-                border: "1px solid #32A853",
-                color: "#32A853",
-                background: "#87DF9F",
+                border:
+                  status === "Dikirim" || status === "Selesai"
+                    ? "1px solid #32A853"
+                    : "1px solid #CBAF4E",
+                color:
+                  status === "Dikirim" || status === "Selesai"
+                    ? "#32A853"
+                    : "#CBAF4E",
+                background:
+                  status === "Dikirim" || status === "Selesai"
+                    ? "#87DF9F"
+                    : "#FFDE6B",
                 width: "156px",
                 height: "26px",
                 display: "flex",
@@ -44,9 +119,9 @@ const DaftarPemesanan = ({ status }) => {
           ) : (
             <Box
               sx={{
-                border: "1px solid #CBAF4E",
-                color: "#CBAF4E",
-                background: "#FFDE6B",
+                border: "1px solid #999999",
+                color: "#666666",
+                background: "#cccccc",
                 width: "156px",
                 height: "26px",
                 display: "flex",
@@ -65,28 +140,32 @@ const DaftarPemesanan = ({ status }) => {
           sx={{
             paddingX: "40px",
             paddingY: "12px",
-            borderBottom: "1px solid #F5F6F9",
+            borderBottom: "1px solid white",
           }}
         >
-          <CheckOutCard />
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "end",
-            }}
-          >
+          {renderProduk()}
+          {!detail.is_resep ? (
             <Box
               sx={{
                 display: "flex",
-                borderTop: "3px solid #F5F6F9",
+                justifyContent: "end",
               }}
             >
-              <Typography sx={{ color: "#213360", mr: 2, mt: 2 }}>
-                Sub Total
-              </Typography>
-              <Typography sx={{ fontWeight: 700, mt: 2 }}>Rp 25.000</Typography>
+              <Box
+                sx={{
+                  display: "flex",
+                  borderTop: "2px solid #C9CCD5",
+                }}
+              >
+                <Typography sx={{ color: "#213360", mr: 2, mt: 2 }}>
+                  Sub Total
+                </Typography>
+                <Typography sx={{ fontWeight: 700, mt: 2 }}>
+                  Rp {total_harga.toLocaleString()}
+                </Typography>
+              </Box>
             </Box>
-          </Box>
+          ) : null}
         </Box>
         <Box
           sx={{
@@ -102,27 +181,54 @@ const DaftarPemesanan = ({ status }) => {
           >
             Chat Customer Service
           </Button>
-          <Box sx={{ display: "flex" }}>
-            <Stack sx={{ textAlign: "end" }}>
-              <Typography sx={{ color: "#4F618E", fontSize: "12px" }}>
-                Bayar Sebelum
-              </Typography>
-              <Typography sx={{ color: "#4F618E", fontSize: "12px" }}>
-                6 April 2022, 15:45
-              </Typography>
-            </Stack>
+          {detail.proof_of_payment ||
+          detail.paymentStatusId === 4 ||
+          total_harga === 0 ||
+          detail.paymentStatusId === 3 ||
+          detail.paymentStatusId === 5 ? null : (
+            <Box sx={{ display: "flex" }}>
+              <Stack sx={{ textAlign: "end" }}>
+                <Typography sx={{ color: "#4F618E", fontSize: "12px" }}>
+                  Bayar Sebelum
+                </Typography>
+                <Typography sx={{ color: "#4F618E", fontSize: "12px" }}>
+                  {moment(detail?.createdAt)
+                    .add(1, "day")
+                    .format("dddd, DD MMMM YYYY, HH:MM")}
+                </Typography>
+              </Stack>
+              <Button variant="outlined" sx={{ height: "30px", ml: "10px" }}>
+                Batalkan
+              </Button>
+              <Button
+                onClick={() => router.push(`/detail-transaksi/${detail.id}`)}
+                variant="contained"
+                sx={{
+                  ml: "5px",
+                  "&:hover": { border: 0 },
+                  width: "157px",
+                  height: "30px",
+                }}
+              >
+                Bayar Sekarang
+              </Button>
+              <ModalUploadPembayaran
+                openModal={uploadPembayaran}
+                handleCloseModal={() => setUploadPembayaran(false)}
+              />
+            </Box>
+          )}
+          {status === "Dikirim" ? (
             <Button
               variant="contained"
-              sx={{
-                ml: "16px",
-                "&:hover": { border: 0 },
-                width: "157px",
-                height: "30px",
+              onClick={async () => {
+                await finishHandler(transaksiId);
+                reRender();
               }}
             >
-              Bayar Sekarang
+              Selesaikan Pesanan
             </Button>
-          </Box>
+          ) : null}
         </Box>
       </Stack>
     </Stack>

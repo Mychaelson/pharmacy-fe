@@ -6,20 +6,39 @@ import "../styles/globals.css";
 import { Provider } from "react-redux";
 import Nav from "components/Nav/nav";
 import Footer from "components/Footer";
+import NavbarBottom from "components/NavbarBottom";
 import { SnackbarProvider } from "notistack";
 import AuthProvider from "components/AuthProvider";
+import "moment/locale/id";
 import AdminProvider from "components/AdminProvider";
+import CartProvider from "components/CartProvider";
+import { useEffect } from "react";
+import GoogleAnalytics from "components/GoogleAnalystics";
 import { store } from "../redux/store";
 import theme from "../theme";
+import * as gtag from "../lib/gtag";
 
 const MyApp = ({ Component, pageProps }) => {
   const router = useRouter();
+
+  useEffect(() => {
+    const handleRouteChange = (url) => {
+      gtag.pageView(url);
+    };
+
+    router.events.on("routeChangeComplete", handleRouteChange);
+
+    return () => {
+      router.events.off("routeChangeComplete", handleRouteChange);
+    };
+  }, [router.events]);
+
   return (
     <Provider store={store}>
       <ThemeProvider theme={theme}>
         <SnackbarProvider maxSnack={3}>
           {router.pathname === "/admin/login" ||
-          router.pathname === "/admin/kartu_stok" ||
+          router.pathname.startsWith("/admin/kartu-stok") ||
           router.pathname === "/register" ||
           router.pathname === "/login" ? (
             <Component {...pageProps} />
@@ -31,11 +50,15 @@ const MyApp = ({ Component, pageProps }) => {
                 </AdminProvider>
               ) : (
                 <>
-                  <AuthProvider>
-                    <Nav />
-                    <Component {...pageProps} />
-                    <Footer />
-                  </AuthProvider>
+                  <GoogleAnalytics />
+                  <CartProvider>
+                    <AuthProvider>
+                      <Nav />
+                      <Component {...pageProps} />
+                      <Footer />
+                      <NavbarBottom />
+                    </AuthProvider>
+                  </CartProvider>
                 </>
               )}
             </>
