@@ -1,9 +1,19 @@
 /* eslint-disable no-console */
 /* eslint-disable camelcase */
-import { Box, Button, Stack, Typography } from "@mui/material";
+import {
+  Box,
+  Button,
+  Stack,
+  Typography,
+  Dialog,
+  DialogTitle,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+} from "@mui/material";
 import CheckOutCard from "components/CheckOut";
-import ModalUploadPembayaran from "components/ModalUploadPembayaran";
 import axiosInstance from "config/api";
+import { useSnackbar } from "notistack";
 import moment from "moment";
 import "moment/locale/id";
 import { useRouter } from "next/router";
@@ -18,9 +28,12 @@ const DaftarPemesanan = ({
   transaksiId,
   reRender,
   time,
+  id,
 }) => {
   const router = useRouter();
-  const [uploadPembayaran, setUploadPembayaran] = useState(false);
+  const [batalkan, setBatalkan] = useState(false);
+  const { enqueueSnackbar } = useSnackbar();
+
   const renderProduk = () => {
     if (detail.is_resep) {
       return (
@@ -30,6 +43,9 @@ const DaftarPemesanan = ({
           produk_price={detail.total_price}
           isResep={detail.is_resep}
           time={time}
+          id={id}
+          status={status}
+          buktiPembayaran={detail.proof_of_payment}
         />
       );
     }
@@ -43,6 +59,7 @@ const DaftarPemesanan = ({
           produk_qty={valo?.quantity}
           product_diskon={valo?.product?.diskon}
           time={time}
+          id={id}
         />
       );
     });
@@ -61,6 +78,23 @@ const DaftarPemesanan = ({
   const finishHandler = (value) => {
     finishTransaction(value);
   };
+
+  const declineTransaction = async (transactionId) => {
+    try {
+      await axiosInstance.post("/admin/decline-transaction", {
+        transactionId,
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.log(err);
+    }
+  };
+
+  const declineHandler = (value) => {
+    declineTransaction(value);
+    enqueueSnackbar("Pesanan Telah Dibatalkan", { variant: "success" });
+  };
+
   return (
     <Stack>
       <Stack
@@ -84,7 +118,7 @@ const DaftarPemesanan = ({
           <Typography>
             {moment(detail?.createdAt)
               .locale("in")
-              .format("dddd, DD MMMM YYYY, HH:MM")}
+              .format("dddd, DD MMMM YYYY, HH:mm")}
           </Typography>
           {status === "Dikirim" ||
           status === "Selesai" ||
@@ -161,7 +195,7 @@ const DaftarPemesanan = ({
                   Sub Total
                 </Typography>
                 <Typography sx={{ fontWeight: 700, mt: 2 }}>
-                  Rp {total_harga.toLocaleString()}
+                  Rp {total_harga.toLocaleString("id")}
                 </Typography>
               </Box>
             </Box>
@@ -194,12 +228,42 @@ const DaftarPemesanan = ({
                 <Typography sx={{ color: "#4F618E", fontSize: "12px" }}>
                   {moment(detail?.createdAt)
                     .add(1, "day")
-                    .format("dddd, DD MMMM YYYY, HH:MM")}
+                    .format("dddd, DD MMMM YYYY, HH:mm")}
                 </Typography>
               </Stack>
-              <Button variant="outlined" sx={{ height: "30px", ml: "10px" }}>
+              <Button
+                onClick={() => setBatalkan(true)}
+                variant="outlined"
+                sx={{ height: "30px", ml: "10px" }}
+              >
                 Batalkan
               </Button>
+
+              {/* Modal Pembatalan */}
+              <Dialog open={batalkan} onClose={() => setBatalkan(false)}>
+                <DialogTitle>Alert!</DialogTitle>
+                <DialogContent>
+                  <DialogContentText>
+                    Apakah anda yakin Membatalkan Pesanan?
+                  </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                  <Button variant="outlined" onClick={() => setBatalkan(false)}>
+                    Kembali
+                  </Button>
+                  <Button
+                    variant="contained"
+                    onClick={async () => {
+                      await declineHandler(transaksiId);
+                      reRender();
+                      setBatalkan(false);
+                    }}
+                    autoFocus
+                  >
+                    Yakin
+                  </Button>
+                </DialogActions>
+              </Dialog>
               <Button
                 onClick={() => router.push(`/detail-transaksi/${detail.id}`)}
                 variant="contained"
@@ -212,10 +276,6 @@ const DaftarPemesanan = ({
               >
                 Bayar Sekarang
               </Button>
-              <ModalUploadPembayaran
-                openModal={uploadPembayaran}
-                handleCloseModal={() => setUploadPembayaran(false)}
-              />
             </Box>
           )}
           {status === "Dikirim" ? (

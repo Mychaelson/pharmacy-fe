@@ -23,7 +23,9 @@ const MyApp = ({ Component, pageProps }) => {
 
   useEffect(() => {
     const handleRouteChange = (url) => {
-      gtag.pageView(url);
+      if (!router.pathname.startsWith("/admin")) {
+        gtag.pageView(url);
+      }
     };
 
     router.events.on("routeChangeComplete", handleRouteChange);
@@ -34,38 +36,42 @@ const MyApp = ({ Component, pageProps }) => {
   }, [router.events]);
 
   return (
-    <Provider store={store}>
-      <ThemeProvider theme={theme}>
-        <SnackbarProvider maxSnack={3}>
-          {router.pathname === "/admin/login" ||
-          router.pathname.startsWith("/admin/kartu-stok") ||
-          router.pathname === "/register" ||
-          router.pathname === "/login" ? (
-            <Component {...pageProps} />
-          ) : (
-            <>
-              {router.pathname.startsWith("/admin") ? (
-                <AdminProvider>
-                  <AdminPageContainer children={<Component {...pageProps} />} />
-                </AdminProvider>
-              ) : (
-                <>
-                  <GoogleAnalytics />
-                  <CartProvider>
-                    <AuthProvider>
-                      <Nav />
-                      <Component {...pageProps} />
-                      <Footer />
-                      <NavbarBottom />
-                    </AuthProvider>
-                  </CartProvider>
-                </>
-              )}
-            </>
-          )}
-        </SnackbarProvider>
-      </ThemeProvider>
-    </Provider>
+    <>
+      <GoogleAnalytics />
+      <Provider store={store}>
+        <ThemeProvider theme={theme}>
+          <SnackbarProvider maxSnack={3}>
+            {router.pathname === "/admin/login" ||
+            router.pathname.startsWith("/admin/kartu-stok") ||
+            router.pathname === "/register" ||
+            router.pathname === "/login" ? (
+              <Component {...pageProps} />
+            ) : (
+              <>
+                {router.pathname.startsWith("/admin") ? (
+                  <AdminProvider>
+                    <AdminPageContainer
+                      children={<Component {...pageProps} />}
+                    />
+                  </AdminProvider>
+                ) : (
+                  <>
+                    <CartProvider>
+                      <AuthProvider>
+                        <Nav />
+                        <Component {...pageProps} />
+                        <Footer />
+                        <NavbarBottom />
+                      </AuthProvider>
+                    </CartProvider>
+                  </>
+                )}
+              </>
+            )}
+          </SnackbarProvider>
+        </ThemeProvider>
+      </Provider>
+    </>
   );
 };
 

@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */
 import { Box, Button, Container, Grid, Stack, Typography } from "@mui/material";
 import AddBoxIcon from "@mui/icons-material/AddBox";
 import CheckOutCard from "components/CheckOut";
@@ -6,13 +5,13 @@ import { useEffect, useState } from "react";
 import ModalIsi from "components/Modal";
 import Link from "next/link";
 import axiosInstance from "config/api";
+import { useSnackbar } from "notistack";
 import ModalAlamat from "components/ModalAlamat";
 import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/router";
 import { addToCart } from "redux/reducer/cart";
-import moment from "moment";
 import Page from "components/Page";
-import { cumulatedPrice, price, time } from "../../redux/reducer/price";
+import { cumulatedPrice, price } from "../../redux/reducer/price";
 
 const CheckOut = () => {
   const priceSelector = useSelector((state) => state.price);
@@ -31,6 +30,7 @@ const CheckOut = () => {
   const router = useRouter();
   const [selectedCart, setSelectedCart] = useState([]);
   const [hargaProducts, setHargaProducts] = useState(null);
+  const { enqueueSnackbar } = useSnackbar();
 
   const dispatch = useDispatch();
 
@@ -60,6 +60,12 @@ const CheckOut = () => {
 
   const addNewTransaction = async () => {
     try {
+      if (!alamatUtama) {
+        enqueueSnackbar("Masukkan Alamat Terlebih Dahulu!", {
+          variant: "warning",
+        });
+        return;
+      }
       const newData = {
         total_price: totalHarga,
         cartId: selectedCart,
@@ -77,7 +83,6 @@ const CheckOut = () => {
 
       dispatch(addToCart(CartData.data));
       dispatch(cumulatedPrice(totalHarga));
-      dispatch(time(moment(res.data.data.createdAt).format("MM/DD/YYYY")));
 
       localStorage.clear();
       router.push(`detail-transaksi/${res.data.data.id}`);
@@ -101,6 +106,7 @@ const CheckOut = () => {
       );
     });
   };
+
   useEffect(() => {
     fetchMainAddress();
   }, []);
@@ -164,7 +170,15 @@ const CheckOut = () => {
 
   return (
     <Page title="Checkout">
-      <Container sx={{ mt: "56px" }}>
+      <Container
+        sx={{
+          mt: "56px",
+          mb: {
+            xs: "100px",
+            md: 0,
+          },
+        }}
+      >
         <Grid container spacing={2} columns={{ xs: 6, md: 12 }}>
           <Grid item xs={6} md={8}>
             <Box
@@ -293,7 +307,7 @@ const CheckOut = () => {
                     Sub Total
                   </Typography>
                   <Typography sx={{ fontWeight: 700, mt: 2 }}>
-                    Rp {parseInt(hargaProducts).toLocaleString()}
+                    Rp {parseInt(hargaProducts).toLocaleString("id")}
                   </Typography>
                 </Box>
               </Box>
@@ -320,7 +334,7 @@ const CheckOut = () => {
                 </Grid>
                 <Grid item xs={8} sx={{ textAlign: "right" }}>
                   <Typography sx={{ fontWeight: 700, fontSize: "14px" }}>
-                    Rp {parseInt(hargaProducts).toLocaleString()}
+                    Rp {parseInt(hargaProducts).toLocaleString("id")}
                   </Typography>
                 </Grid>
                 <Grid item xs={4} sx={{ mb: "24px" }}>
@@ -328,7 +342,7 @@ const CheckOut = () => {
                 </Grid>
                 <Grid item xs={8} sx={{ textAlign: "right" }}>
                   <Typography sx={{ fontWeight: 700, fontSize: "14px" }}>
-                    Rp {ongkir?.toLocaleString()}
+                    Rp {ongkir?.toLocaleString("id")}
                   </Typography>
                 </Grid>
               </Grid>
@@ -355,7 +369,7 @@ const CheckOut = () => {
                       color: "Brand.500",
                     }}
                   >
-                    Rp {total().toLocaleString()}
+                    Rp {total().toLocaleString("id")}
                   </Typography>
                 </Grid>
               </Grid>

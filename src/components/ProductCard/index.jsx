@@ -97,6 +97,7 @@ const ProductCard = ({
         "&:hover": {
           transform: "translateY(-5px)",
           boxShadow: "0px 12px 20px -12px black",
+          cursor: "pointer",
         },
         backgroundColor: totalStock() > 0 ? "white" : "#EFEFEF",
       }}
@@ -169,7 +170,7 @@ const ProductCard = ({
                   textDecoration: "line-through",
                 }}
               >
-                Rp {parseInt(harga).toLocaleString()}
+                Rp {parseInt(harga).toLocaleString("id")}
               </Typography>
             </Box>
           </Box>
@@ -196,7 +197,7 @@ const ProductCard = ({
         <Box display="flex" marginTop="7px">
           <Box maxWidth="103px">
             <Typography fontWeight="bold">
-              Rp {parseInt(harga - harga * (diskon / 100)).toLocaleString()}
+              Rp {parseInt(harga - harga * (diskon / 100)).toLocaleString("id")}
             </Typography>
           </Box>
           <Typography>/ Pack</Typography>

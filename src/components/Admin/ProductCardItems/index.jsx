@@ -1,7 +1,9 @@
 /* eslint-disable no-unused-vars */
 import { Box, Button, Grid, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
-import { useState } from "react";
+import axiosInstance from "config/api";
+import { useEffect, useState } from "react";
+
 import ModalSalinanResep from "../ModalSalinanResep";
 
 const Image = styled("img")({
@@ -20,6 +22,7 @@ const ProductCardItems = ({
   orderCode,
   transaksiId,
   orderTime,
+  addressDetail,
 }) => {
   const [salinanResep, setSalinanResep] = useState(false);
 
@@ -54,12 +57,13 @@ const ProductCardItems = ({
               fotoResep={image}
               transaksiId={transaksiId}
               waktuOrder={orderTime}
+              addressDetail={addressDetail}
             />
           </>
         ) : null}
         {!isObatResep ? (
           <Typography sx={{ fontSize: "14px", color: "gray" }}>
-            {jumlah} x Rp {harga?.toLocaleString()}
+            {jumlah} x Rp {harga?.toLocaleString("id")}
           </Typography>
         ) : null}
       </Grid>
